@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>betterer-dira — Lottery Probability Calculator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="description" content="Upload housing lottery data and calculate your chances per lottery, per city, and overall (up to 3 cities).">
+</head>
+<body>
+  <header>
+    <h1>🏠 betterer‑dira</h1>
+    <p>Upload your lotteries CSV and analyze chances per lottery, per city, and overall (select up to 3 cities).</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1) Upload data</h2>
+      <p>CSV columns (header required): <code>Name,City,Total_Houses,Applicants,Wheelchair_Houses,Wheelchair_Applicants,Combat_Houses,Combat_Applicants,Reserve_Houses,Reserve_Applicants,Local_Houses,Local_Applicants</code></p>
+      <div class="upload">
+        <input type="file" id="fileInput" accept=".csv" />
+        <button id="loadSample">Load sample data</button>
+      </div>
+      <div id="loadMsg" class="muted"></div>
+    </section>
+
+    <section class="card">
+      <h2>2) Review parsed lotteries</h2>
+      <div id="dataTable"></div>
+      <div id="validationErrors" class="error"></div>
+    </section>
+
+    <section class="card">
+      <h2>3) Select cities (max 3)</h2>
+      <div id="citySelector"></div>
+    </section>
+
+    <section class="card">
+      <h2>4) Results</h2>
+      <div id="results"></div>
+      <div class="actions">
+        <button id="exportResults" disabled>Export results CSV</button>
+        <a id="downloadLink" class="hidden">Download</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>How calculations work</h2>
+      <details>
+        <summary>Click to expand</summary>
+        <div class="explain">
+          <p><strong>Preferred populations:</strong> ♿ Wheelchair/Disabled, 🎖️ Combat Fighters, 🛡️ Active Reserve, 🏠 Locals.</p>
+          <ol>
+            <li><strong>Allocate designated houses</strong> to each preferred group: used = min(designated, applicants).</li>
+            <li><strong>Combat exception:</strong> Unclaimed Combat houses go to Active Reserve first; if still unclaimed, they go to the general pool.</li>
+            <li><strong>General pool houses</strong> = unclaimed ♿ + unclaimed (🛡️ after combat spillover) + unclaimed 🏠 + all Regular houses (Total - all designated).</li>
+            <li><strong>General pool competitors</strong> = Regular applicants + overflow from all preferred groups (those who didn’t get a designated house).</li>
+            <li><strong>Lottery probability</strong> = min(1, GeneralPoolHouses / GeneralPoolCompetitors).</li>
+            <li><strong>City probability</strong> (win at least one in that city) = 1 − Π(1 − p<sub>lottery</sub>).</li>
+            <li><strong>Overall probability</strong> across your selected cities (max 3) = 1 − Π(1 − p<sub>city</sub>).</li>
+          </ol>
+          <p>All totals are inclusive of preferred populations. Regular applicants are: <code>Applicants − (Wheelchair_Applicants + Combat_Applicants + Reserve_Applicants + Local_Applicants)</code>.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <p>Made for GitHub Pages – put these in the <strong>betterer-dira</strong> repo and enable Pages.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
