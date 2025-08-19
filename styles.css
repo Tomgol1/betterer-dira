@@ -8,4 +8,35 @@ header p{margin:4px 0 0;color:var(--muted)}
 .card{background:var(--card);border:1px solid #1f2937;padding:16px;margin:16px 0;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .load-section{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .muted{color:var(--muted);font-size:.95em}
-.error{color:#fecaca;
+.error{color:#fecaca;margin-top:8px}
+.success{color:#86efac;margin-top:8px}
+.loading{color:var(--acc)}
+.tablewrap{overflow:auto;border:1px solid #1f2937;border-radius:12px;max-height:400px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:#111827;z-index:10}
+.actions{margin-top:10px;display:flex;gap:12px;align-items:center}
+.hidden{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border:1px solid #334155;border-radius:999px;background:rgba(255,255,255,.02);cursor:pointer;transition:all 0.2s}
+.chip:hover{border-color:#3b82f6;background:rgba(59,130,246,.1)}
+.chip input{margin:0}
+h3{margin-top:22px}
+th.sortable{cursor:pointer;user-select:none;transition:color 0.2s}
+th.sortable:hover{color:var(--acc)}
+.sort-icon{margin-left:4px;font-size:0.9em;opacity:0.7}
+th.sortable:hover .sort-icon{opacity:1}
+details{margin-top:8px}
+code{background:#0b1220;padding:2px 6px;border-radius:6px;border:1px solid #1f2735;font-size:0.9em}
+button{border:1px solid #334155;background:#0e1726;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;transition:all 0.2s}
+button:hover:not(:disabled){border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+button:disabled{opacity:0.6;cursor:not-allowed}
+button.primary{background:#2563eb;border-color:#3b82f6}
+button.primary:hover:not(:disabled){background:#1d4ed8}
+input[type="file"]{border:1px dashed #334155;padding:8px;border-radius:10px}
+footer{color:var(--muted);text-align:center;padding-bottom:28px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
+.stat{text-align:center;padding:8px;background:rgba(255,255,255,.02);border-radius:8px}
+.stat-number{font-size:1.4em;font-weight:600;color:var(--acc)}
+.stat-label{font-size:0.9em;color:var(--muted)}
+.refresh-info{display:flex;gap:8px;align-items:center;margin-top:8px}
