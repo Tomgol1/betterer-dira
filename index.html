@@ -82,8 +82,14 @@
         <summary>Click to expand</summary>
         <div class="explain">
           <p><strong>Priority groups:</strong> ♿ Wheelchair/Disabled, 🎖️ Combat Reservists, 🛡️ Reserve Duty, 🏠 Local Residents.</p>
+          
+          <div style="background: rgba(255,193,7,0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin: 12px 0;">
+            <strong>⚠️ Important:</strong> Since army systems aren't connected to the housing lottery system, Combat and Reserve Duty applicant counts show as zero in the API. However, we assume these populations <strong>fully subscribe</strong> to claim their designated houses (they would be foolish not to!). The calculator automatically treats zero applicants as "houses fully claimed" for these groups.
+          </div>
+          
           <ol>
             <li><strong>Allocate designated houses</strong> to each priority group: used = min(designated, applicants).</li>
+            <li><strong>Combat/Reserve assumption:</strong> If Combat or Reserve houses exist but applicants show as zero, assume full subscription (houses = applicants).</li>
             <li><strong>Combat exception:</strong> Unclaimed Combat houses go to Reserve Duty first; if still unclaimed, they go to the general pool.</li>
             <li><strong>General pool houses</strong> = unclaimed ♿ + unclaimed (🛡️ after combat spillover) + unclaimed 🏠 + all Regular houses (Total - all designated).</li>
             <li><strong>General pool competitors</strong> = Regular applicants + overflow from all priority groups (those who didn't get a designated house).</li>
@@ -92,6 +98,12 @@
             <li><strong>Overall probability</strong> across your selected cities (max 3) = 1 − Π(1 − p<sub>city</sub>).</li>
           </ol>
           <p>All totals are inclusive of priority populations. Regular applicants are calculated as total minus all priority applicants.</p>
+          
+          <p><strong>Result columns explained:</strong></p>
+          <ul>
+            <li><strong>Combat_Used:</strong> Shows "used/total" Combat houses (e.g., "15/15" means all 15 Combat houses are claimed)</li>
+            <li><strong>Reserve_Used:</strong> Shows "used/available" Reserve houses including Combat spillover (e.g., "25/30" means 25 used out of 20 Reserve + 10 Combat spillover)</li>
+          </ul>
         </div>
       </details>
     </section>
