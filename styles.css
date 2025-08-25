@@ -7,6 +7,7 @@ header h1{margin:8px 0 0}
 header p{margin:4px 0 0;color:var(--muted)}
 .card{background:var(--card);border:1px solid #1f2937;padding:16px;margin:16px 0;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .load-section{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.city-controls{display:flex;gap:12px;margin-bottom:12px;align-items:center}
 .muted{color:var(--muted);font-size:.95em}
 .error{color:#fecaca;margin-top:8px}
 .success{color:#86efac;margin-top:8px}
