@@ -39,7 +39,7 @@ function transformDiraData(apiData) {
     }));
 }
 
-// Lottery calculation logic
+// Enhanced lottery calculation logic with full Combat/Reserve subscription assumption
 function computeLottery(rec) {
   const TH = rec.Total_Houses, A = rec.Applicants;
   const D_h = rec.Wheelchair_Houses, D_a = rec.Wheelchair_Applicants;
@@ -50,26 +50,48 @@ function computeLottery(rec) {
   const designated = D_h + C_h + R_h + L_h;
   const regularHouses = Math.max(0, TH - designated);
 
+  // UPDATED LOGIC: Assume Combat and Reserve populations fully subscribe if houses are available
+  // If there are designated houses for these groups but zero applicants reported,
+  // we assume the houses are fully claimed (army systems not connected)
+  
+  const effective_C_a = (C_h > 0 && C_a === 0) ? C_h : C_a; // Assume full subscription for Combat
+  const effective_R_a = (R_h > 0 && R_a === 0) ? R_h : R_a; // Assume full subscription for Reserve
+
+  // Standard allocations
   const used_dis = Math.min(D_h, D_a), unclaimed_dis = D_h - used_dis;
-  const used_com = Math.min(C_h, C_a), unclaimed_com = C_h - used_com;
+  const used_com = Math.min(C_h, effective_C_a), unclaimed_com = C_h - used_com;
   const used_loc = Math.min(L_h, L_a), unclaimed_loc = L_h - used_loc;
 
+  // Combat spillover to Reserve (if Combat houses are unclaimed)
   const reserve_available = R_h + unclaimed_com;
-  const used_res = Math.min(reserve_available, R_a);
+  const used_res = Math.min(reserve_available, effective_R_a);
   const unclaimed_res = reserve_available - used_res;
 
   const generalPoolHouses = unclaimed_dis + unclaimed_res + unclaimed_loc + regularHouses;
-  const regularApplicants = Math.max(0, A - (D_a + C_a + R_a + L_a));
+  
+  // Calculate regular applicants more carefully
+  // Total applicants minus all priority applicants (using effective numbers)
+  const regularApplicants = Math.max(0, A - (D_a + effective_C_a + effective_R_a + L_a));
 
+  // Calculate overflow from each priority group
   const overflow_dis = Math.max(0, D_a - D_h);
-  const overflow_com = Math.max(0, C_a - C_h);
-  const overflow_res = Math.max(0, R_a - reserve_available);
+  const overflow_com = Math.max(0, effective_C_a - C_h);
+  const overflow_res = Math.max(0, effective_R_a - reserve_available);
   const overflow_loc = Math.max(0, L_a - L_h);
 
   const totalCompetitors = regularApplicants + overflow_dis + overflow_com + overflow_res + overflow_loc;
   const pLottery = totalCompetitors > 0 ? Math.min(1, generalPoolHouses / totalCompetitors) : 0;
 
-  return { regularHouses, generalPoolHouses, totalCompetitors, pLottery };
+  return { 
+    regularHouses, 
+    generalPoolHouses, 
+    totalCompetitors, 
+    pLottery,
+    effective_C_a,
+    effective_R_a,
+    used_com,
+    used_res
+  };
 }
 
 function combineIndependent(probabilities) {
@@ -137,6 +159,8 @@ function renderSortableTable(id, rows, title = '') {
 
 function addTableSorting(tableId, originalData) {
   const table = document.getElementById(tableId);
+  if (!table) return;
+  
   const headerElements = table.querySelectorAll('th.sortable');
   let currentSort = { column: null, direction: 'asc' };
   
@@ -156,12 +180,14 @@ function addTableSorting(tableId, originalData) {
       // Update sort icons
       headerElements.forEach(h => {
         const icon = h.querySelector('.sort-icon');
-        if (h.dataset.column === column) {
-          icon.textContent = currentSort.direction === 'asc' ? '↑' : '↓';
-          h.style.color = 'var(--acc)';
-        } else {
-          icon.textContent = '⇅';
-          h.style.color = 'var(--text)';
+        if (icon) {
+          if (h.dataset.column === column) {
+            icon.textContent = currentSort.direction === 'asc' ? '↑' : '↓';
+            h.style.color = 'var(--acc)';
+          } else {
+            icon.textContent = '⇅';
+            h.style.color = 'var(--text)';
+          }
         }
       });
       
@@ -193,10 +219,12 @@ function addTableSorting(tableId, originalData) {
       
       // Re-render table body
       const tbody = table.querySelector('tbody');
-      const columnKeys = Object.keys(sortedData[0]);
-      tbody.innerHTML = sortedData.map(r => 
-        "<tr>" + columnKeys.map(h => `<td>${r[h]}</td>`).join("") + "</tr>"
-      ).join("");
+      if (tbody) {
+        const columnKeys = Object.keys(sortedData[0]);
+        tbody.innerHTML = sortedData.map(r => 
+          "<tr>" + columnKeys.map(h => `<td>${r[h]}</td>`).join("") + "</tr>"
+        ).join("");
+      }
     });
   });
 }
@@ -262,12 +290,15 @@ function computeAndRender() {
       Applicants: rec.Applicants,
       GeneralPool_Houses: calc.generalPoolHouses,
       Competitors: calc.totalCompetitors,
-      P_Win_Lottery: formatPct(calc.pLottery)
+      P_Win_Lottery: formatPct(calc.pLottery),
+      // Show effective numbers for transparency
+      Combat_Used: calc.used_com + "/" + rec.Combat_Houses,
+      Reserve_Used: calc.used_res + "/" + (rec.Reserve_Houses + (rec.Combat_Houses - calc.used_com))
     };
   });
 
   // Render sortable lottery results table
-  renderSortableTable("results", state.perLottery);
+  renderSortableTable("results", state.perLottery, "Per-Lottery Results (Click column headers to sort)");
 
   // Calculate per-city probabilities
   const byCity = {};
@@ -321,15 +352,22 @@ function computeAndRender() {
   
   addTableSorting("cityResults_table", combined);
 
-  document.getElementById("exportResults").disabled = state.perLottery.length === 0;
+  // Enable export button
+  const exportBtn = document.getElementById("exportResults");
+  if (exportBtn) {
+    exportBtn.disabled = state.perLottery.length === 0;
+  }
 }
 
 // Manual JSON loading functions
 function showManualInstructions() {
   const instructions = document.getElementById('manualInstructions');
+  const button = document.getElementById('showManualInstructions');
+  
+  if (!instructions || !button) return;
+  
   instructions.classList.toggle('hidden');
   
-  const button = document.getElementById('showManualInstructions');
   if (instructions.classList.contains('hidden')) {
     button.textContent = '📊 Load Live Data';
   } else {
@@ -340,6 +378,9 @@ function showManualInstructions() {
 function loadFromJsonInput() {
   const textarea = document.getElementById('jsonInput');
   const status = document.getElementById('parseStatus');
+  
+  if (!textarea || !status) return;
+  
   const jsonText = textarea.value.trim();
   
   if (!jsonText) {
@@ -381,20 +422,32 @@ function loadFromJsonInput() {
     const cities = [...new Set(transformedData.map(r => r.City))].sort();
     renderCitySelector(cities);
     
-    document.getElementById("results").innerHTML = "";
+    const resultsEl = document.getElementById("results");
+    if (resultsEl) resultsEl.innerHTML = "";
     computeAndRender();
     
     // Success feedback
-    document.getElementById('loadMsg').textContent = `✅ Successfully loaded ${transformedData.length} active lotteries from ${cities.length} cities`;
-    document.getElementById('loadMsg').className = 'success';
-    document.getElementById('loadError').textContent = '';
+    const loadMsg = document.getElementById('loadMsg');
+    const loadError = document.getElementById('loadError');
+    
+    if (loadMsg) {
+      loadMsg.textContent = `✅ Successfully loaded ${transformedData.length} active lotteries from ${cities.length} cities`;
+      loadMsg.className = 'success';
+    }
+    if (loadError) {
+      loadError.textContent = '';
+    }
     
     status.textContent = `✅ Loaded ${transformedData.length} lotteries`;
     status.style.color = '#86efac';
     
     // Hide instructions after successful load
-    document.getElementById('manualInstructions').classList.add('hidden');
-    document.getElementById('showManualInstructions').textContent = '📊 Load Live Data';
+    const instructions = document.getElementById('manualInstructions');
+    const button = document.getElementById('showManualInstructions');
+    if (instructions && button) {
+      instructions.classList.add('hidden');
+      button.textContent = '📊 Load Live Data';
+    }
     
     // Clear the textarea
     textarea.value = '';
@@ -404,7 +457,10 @@ function loadFromJsonInput() {
     status.textContent = `❌ Error: ${error.message}`;
     status.style.color = '#fecaca';
     
-    document.getElementById('loadError').textContent = `Failed to parse data: ${error.message}`;
+    const loadError = document.getElementById('loadError');
+    if (loadError) {
+      loadError.textContent = `Failed to parse data: ${error.message}`;
+    }
   }
 }
 
@@ -418,9 +474,9 @@ function loadSampleData() {
       Wheelchair_Houses: 8,
       Wheelchair_Applicants: 1,
       Combat_Houses: 37,
-      Combat_Applicants: 0,
+      Combat_Applicants: 0, // Will be treated as 37 (full subscription)
       Reserve_Houses: 50,
-      Reserve_Applicants: 0,
+      Reserve_Applicants: 0, // Will be treated as 50 (full subscription)
       Local_Houses: 50,
       Local_Applicants: 265
     },
@@ -432,9 +488,9 @@ function loadSampleData() {
       Wheelchair_Houses: 5,
       Wheelchair_Applicants: 7,
       Combat_Houses: 10,
-      Combat_Applicants: 12,
+      Combat_Applicants: 0, // Will be treated as 10
       Reserve_Houses: 12,
-      Reserve_Applicants: 40,
+      Reserve_Applicants: 0, // Will be treated as 12
       Local_Houses: 0,
       Local_Applicants: 0
     },
@@ -446,9 +502,9 @@ function loadSampleData() {
       Wheelchair_Houses: 0,
       Wheelchair_Applicants: 0,
       Combat_Houses: 5,
-      Combat_Applicants: 2,
+      Combat_Applicants: 0, // Will be treated as 5
       Reserve_Houses: 8,
-      Reserve_Applicants: 3,
+      Reserve_Applicants: 0, // Will be treated as 8
       Local_Houses: 10,
       Local_Applicants: 70
     },
@@ -460,9 +516,9 @@ function loadSampleData() {
       Wheelchair_Houses: 3,
       Wheelchair_Applicants: 6,
       Combat_Houses: 15,
-      Combat_Applicants: 20,
+      Combat_Applicants: 0, // Will be treated as 15
       Reserve_Houses: 20,
-      Reserve_Applicants: 10,
+      Reserve_Applicants: 0, // Will be treated as 20
       Local_Houses: 40,
       Local_Applicants: 50
     }
@@ -489,24 +545,30 @@ function loadSampleData() {
   const cities = [...new Set(sampleData.map(r => r.City))].sort();
   renderCitySelector(cities);
 
-  document.getElementById("results").innerHTML = "";
+  const resultsEl = document.getElementById("results");
+  if (resultsEl) resultsEl.innerHTML = "";
   computeAndRender();
 
-  document.getElementById('loadMsg').textContent = '✓ Loaded sample data';
-  document.getElementById('loadMsg').className = 'success';
+  const loadMsg = document.getElementById('loadMsg');
+  if (loadMsg) {
+    loadMsg.textContent = '✓ Loaded sample data (Combat/Reserve assume full subscription)';
+    loadMsg.className = 'success';
+  }
 }
 
 // CSV export
 function exportToCSV() {
   if (!state.perLottery.length) return;
 
-  const headers = ['Name', 'City', 'P_Win_Lottery'];
-  const rows = state.perLottery.map(r => [r.Name, r.City, r.P_Win_Lottery]);
+  const headers = ['Name', 'City', 'P_Win_Lottery', 'Combat_Used', 'Reserve_Used'];
+  const rows = state.perLottery.map(r => [r.Name, r.City, r.P_Win_Lottery, r.Combat_Used, r.Reserve_Used]);
   
   // Add overall probability
   const selected = [...state.selectedCities];
-  const overallRow = ['(Overall)', selected.join(' | ') || '—', 'Calculate from results table'];
-  rows.push(overallRow);
+  if (selected.length > 0) {
+    const overallRow = ['(Overall)', selected.join(' | '), 'See City & Overall table', '', ''];
+    rows.push(overallRow);
+  }
 
   const csvContent = [headers, ...rows]
     .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
@@ -516,18 +578,26 @@ function exportToCSV() {
   const url = URL.createObjectURL(blob);
   
   const link = document.getElementById('downloadLink');
-  link.href = url;
-  link.download = 'lottery_results.csv';
-  link.classList.remove('hidden');
-  link.textContent = 'Download Results CSV';
+  if (link) {
+    link.href = url;
+    link.download = 'lottery_results.csv';
+    link.classList.remove('hidden');
+    link.textContent = 'Download Results CSV';
+  }
 }
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('showManualInstructions').addEventListener('click', showManualInstructions);
-  document.getElementById('loadFromJson').addEventListener('click', loadFromJsonInput);
-  document.getElementById('loadSample').addEventListener('click', loadSampleData);
-  document.getElementById('exportResults').addEventListener('click', exportToCSV);
+  // Ensure all buttons exist before adding listeners
+  const showManualBtn = document.getElementById('showManualInstructions');
+  const loadFromJsonBtn = document.getElementById('loadFromJson');
+  const loadSampleBtn = document.getElementById('loadSample');
+  const exportBtn = document.getElementById('exportResults');
+  
+  if (showManualBtn) showManualBtn.addEventListener('click', showManualInstructions);
+  if (loadFromJsonBtn) loadFromJsonBtn.addEventListener('click', loadFromJsonInput);
+  if (loadSampleBtn) loadSampleBtn.addEventListener('click', loadSampleData);
+  if (exportBtn) exportBtn.addEventListener('click', exportToCSV);
 
   // Auto-load sample data on page load
   loadSampleData();
