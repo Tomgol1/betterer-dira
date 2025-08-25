@@ -1,6 +1,6 @@
 /* betterer-dira — Live Lottery Probability Calculator */
 
-const API_URL = 'https://www.dira.moch.gov.il/api/Invoker?method=Projects&param=%3FProjectStatus%3D4%26PageNumber%3D1%26PageSize%3D50%26IsInit%3Dtrue';
+const API_URL = 'https://www.dira.moch.gov.il/api/Invoker?method=Projects&param=%3FProjectStatus%3D4%26PageNumber%3D1%26PageSize%3D100%26IsInit%3Dtrue';
 
 // State management
 const state = {
